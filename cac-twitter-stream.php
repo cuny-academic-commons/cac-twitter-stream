@@ -266,7 +266,7 @@ get_header(); ?>
         <h3>Download the Source</h3>
         <div class="cac-content">
           <p>We proudly offer the source used to create this page for free.</p>
-          <p><a href="http://https://github.com/cuny-academic-commons/CAC-Twitter-Stream">Download Now &raquo;</a></p>
+          <p><a href="https://github.com/cuny-academic-commons/CAC-Twitter-Stream">Download Now &raquo;</a></p>
         </div>
       </div>
     </div>
