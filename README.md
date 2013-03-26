@@ -40,7 +40,7 @@ if ( isset( $_REQUEST['stream'] ) && $_REQUEST['stream'] ) { // this is ajax
 }
 ```
 
-The Javascript, that I will explain below, will set 'stream' as a POST item when an ajax enabled link has been clicked on the page. If the page is receiving an ajax request it fetches the appropriate stream and then renders the HTML structure back to the correct page element. If 'stream' does not exists (non-ajax request) then the page is being loaded for the first time. In this case the page just gets whatever default stream you would like to display. In our case this is our main twitter stream. The HTML (discussed below) will display the corresponding stream on initial page load.
+The Javascript, which I explain below, will set 'stream' as a POST item when an ajax enabled link has been clicked on the page. If the page is receiving an ajax request it fetches the appropriate stream and then renders the HTML structure back to the correct page element. If 'stream' does not exist (non-ajax request) then the page is being loaded for the first time. In this case the page just gets whatever default stream you would like to display. For The CUNY Academic Commons this is our main twitter stream. The HTML (discussed below) will display the corresponding stream on initial page load.
 
 The rendering of the actual page begins at this point (except in the case of an ajax request) by calling the WordPress `get_header()` function. It then defines some basic styles to make the page portable, you will most likely need to change these styles to fit your site as they are pretty specific to The Commons layout. After the styles, the necessary Javascript to support ajax calls and page interactivity is defined.
 
@@ -48,7 +48,7 @@ Wrapped in a `jQuery(function(){})`, the Javascript is responsible for showing a
 
 The remainder of the page defines the HTML structure. The ID's and rel attributes of the links that you're going to use if you customize this for your own site are what you need to concentrate on. As I mentioned above, those attributes are used in the Javascript, and eventually the PHP that responds to the Javascript ajax calls, to properly render and control the display of elements on the page. All the other markup should be pretty self explanatory and in large part optional.
 
-Please direct any questions or complaints to the issues section of this repo.
+Please direct any questions or complaints to the [issues](https://github.com/cuny-academic-commons/CAC-Twitter-Stream/issues) section of this repo.
 
 I also accept compliments.  :-)
 
