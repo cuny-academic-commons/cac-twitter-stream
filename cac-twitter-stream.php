@@ -1,200 +1,27 @@
 <?php
 /*
 Template Name: CAC Twitter Stream
-Author: Dominic Giglio
-Author URI: humanshell.net
-Author Email: humanshell@gmail.com
+Author: [YOUR NAME HERE]
+Author URI: [YOUR URL HERE]
+Author Email: [YOUR EMAIL HERE]
 License: GPLv3
 */
 
-/**
- * The CAC_Twitter_Stream class is responsible for consolidating and updating all streams
- * and storing them in the DB as transients to help control rate limits
- */
-class CAC_Twitter_Stream {
+get_header();
 
-  // array of stream names and corresponding urls
-  public $urls = array(
-    'cuny_hashtag'     => 'http://search.twitter.com/search.json?q=%23cuny',
-    'list_members'     => 'http://api.twitter.com/1/lists/members.json?slug=cunycommons&owner_screen_name=cunycommons',
-    'list_timeline'    => 'http://api.twitter.com/1/lists/statuses.json?slug=cunycommons&owner_screen_name=cunycommons&include_rts=true',
-    'commons_timeline' => 'http://api.twitter.com/1/statuses/user_timeline.json?screen_name=cunycommons&include_rts=true',
-    'commons_mentions' => 'http://search.twitter.com/search.json?q=@cunycommons',
-    'list_subscribers' => 'http://api.twitter.com/1/lists/subscribers.json?slug=cunycommons&owner_screen_name=cunycommons'
-  );
-
-  // array of streams returned from twitter's api
-  public $streams = array();
-
-  /**
-   * fetch_stream()
-   *
-   * This method is responsible for getting a requested stream's transient entry from the options table.
-   * If an entry does not exist, it will call parse_response() to get the stream from twitter's api.
-   * This method returns nothing. It simply ensures the $streams[] array has been properly populated.
-   *
-   * @uses wp_remote_get() Provides graceful fallbacks for HTTP request methods
-   * @param string $name The name of the stream in the $urls[] and $streams[] arrays
-   */
-  public function fetch_stream( $name ) {
-    if ( ! $this->streams[$name] = maybe_unserialize( get_transient( "cac_twitter_$name" ) ) ) {
-      $response = wp_remote_get( $this->urls[$name] );
-      if ( $body = $response['body'] ) {
-        $this->parse_response( $name, json_decode( $body ) );
-      }
-    }
-  }
-
-  /**
-   * parse_response()
-   *
-   * This method's sole responsibility is to parse the info we want from twitter's response,
-   * populate the $streams[] array with that info and then store it in a transient to improve
-   * page load times and avoid twitter's rate limiting.
-   *
-   * @param string $name The name used as the key in the $streams[] array
-   * @param object $res The json decoded response from twitter's api
-   */
-  private function parse_response( $name, $res ) {
-
-    switch ( $name ) {
-      case 'commons_timeline': case 'list_timeline':
-
-        // loop over each returned tweet to parse out only the info we need
-        foreach ( $res as $tweet ) {
-
-          // store each tweet as an array in the $streams[] array
-          $this->streams[$name][] = array(
-            'name'          => $tweet->user->name,
-            'text'          => $this->twitterize( $tweet->text ),
-            'source'        => $tweet->source,
-            'created_at'    => $tweet->created_at,
-            'screen_name'   => $tweet->user->screen_name,
-            'profile_image' => $tweet->user->profile_image_url
-          );
-
-        }
-        break;
-
-      case 'cuny_hashtag': case 'commons_mentions':
-
-        // loop over each returned tweet to parse out only the info we need
-        foreach ( $res->results as $tweet ) {
-
-          // store them in the $streams[] array
-          $this->streams[$name][] = array(
-            'name'          => $tweet->from_user_name,
-            'text'          => $this->twitterize( $tweet->text ),
-            'source'        => htmlspecialchars_decode( $tweet->source ),
-            'created_at'    => $tweet->created_at,
-            'screen_name'   => $tweet->from_user,
-            'profile_image' => $tweet->profile_image_url
-          );
-
-        }
-        break;
-
-      case 'list_members': case 'list_subscribers':
-
-        // loop over each returned user to parse out only the info we need
-        foreach ( $res->users as $user ) {
-
-          // store each user as an array in the $streams[] array
-          $this->streams[$name][] = array(
-            'name'          => $user->name,
-            'text'          => $this->twitterize( $user->description ),
-            'location'      => $user->location,
-            'screen_name'   => $user->screen_name,
-            'profile_image' => $user->profile_image_url
-          );
-
-        }
-        break;
-    }
-
-    // store the parsed data in a transient so we don't need to do this on each request
-    set_transient( "cac_twitter_$name", $this->streams[$name], 60*60*2 ); // 2 hours
-  }
-
-  /**
-   * twitterize()
-   *
-   * This little function "twitterizes" the hashtags and @mentions returned from twitter's api, turning them into links.
-   * from Boone Gorges: https://github.com/boonebgorges/Hard-G/blob/master/wp-content/themes/boones-photoblog/functions.php
-   *
-   * @param string $text The text containing @mentions and hastags to be converted
-   * @return string $text The text with @mentions and hastags converted
-   */
-  private function twitterize( $text ) {
-    $text = preg_replace("/[@]+([A-Za-z0-9-_]+)/", "<a href=\"http://twitter.com/\\1\" target=\"_blank\">\\0</a>", $text );
-    $text = preg_replace("/[#]+([A-Za-z0-9-_]+)/", "<a href=\"http://twitter.com/search?q=%23\\1\" target=\"_blank\">\\0</a>", $text );
-    $text = preg_replace("/(http:\/\/t\.co\/)+\w+/", "<a href=\"\\0\" target=\"_blank\">\\0</a>", $text );
-    return $text;
-  }
-
-  /**
-   * render_html()
-   *
-   * This method creates and returns a string containing the full html structure
-   * for every tweet in the stream requested, ready for output directly to the page.
-   *
-   * @param string $name The name of the stream requested by the user
-   * @return string $output A single string with the full html structure to be displayed
-   */
-  public function render_html( $name ) {
-    $output = "";
-
-    foreach ( $this->streams[$name] as $stream ) {
-      $output .= "<li class='tweet'>
-                    <img src='{$stream['profile_image']}' alt='{$stream['name']}' width='48' height='48' />
-                    <a class='username' href='http://twitter.com/{$stream['screen_name']}'>{$stream['name']}</a>
-                    <p>{$stream['text']}<br />";
-
-      if ( $name == 'list_members' || $name == 'list_subscribers' )
-        $output .= "<span>from: {$stream['location']}</span></p>";
-      else
-        $output .= "<span>via: {$stream['source']}</span></p>";
-
-      $output .= '</li>';
-    }
-
-    return $output;
-  }
-
-} // end class CAC_Twitter_Stream
-
-/**
- * This page will be accessed in one of two ways:
- *
- * 1.) when first visiting the page
- * 2.) when loading new tweets via an ajax call
- *
- * When an ajax request comes in, we just need to get the tweets the user is looking for, so
- * we return them and then bail. On initial page load we want to make sure the commons_timeline
- * has been fetched so the page isn't blank.
- */
-$cac_twitter_stream = new CAC_Twitter_Stream();
-
-if ( isset( $_REQUEST['stream'] ) && $_REQUEST['stream'] ) { // this is ajax
-  $cac_twitter_stream->fetch_stream( $_REQUEST['stream'] );
-  echo $cac_twitter_stream->render_html( $_REQUEST['stream'] );
-  return false;
-} else { // this is initial page load
-  $cac_twitter_stream->fetch_stream( 'commons_timeline' );
-}
-
-get_header(); ?>
+// get custom field settings
+$custom_fields = get_post_custom();
+$theme         = $custom_fields['cts_theme']        ? $custom_fields['cts_theme'][0]          : 'light';
+$chrome        = $custom_fields['cts_chrome']       ? join($custom_fields['cts_chrome'], ' ') : '';
+$link_color    = $custom_fields['cts_link_color']   ? $custom_fields['cts_link_color'][0]     : '#0084b4';
+$border_color  = $custom_fields['cts_border_color'] ? $custom_fields['cts_border_color'][0]   : '#e8e8e8';
+?>
 
 <style type="text/css">
-  .introbox { height: inherit; }
-  .introbox ul { margin: 0 40px; }
-  .tweet { margin: 10px; padding: 10px; border-top: solid #eee 1px; min-height: 85px; }
-  .tweet a { text-decoration: none; }
-  .tweet img { float: left; margin: 10px 25px 50px 10px; display: block; border: solid #f3f3f3 2px; box-shadow: 0px 0px 5px #444; }
-  .username { font-weight: bold; }
-  .cac-twitter-widget ul { margin-left: 10px; }
-  .cac-twitter-widget a { text-decoration: none; }
+  iframe[id^='twitter-widget-'] { width:100%; }
 </style>
+
+<script>!function(d,s,id){var js,fjs=d.getElementsByTagName(s)[0],p=/^http:/.test(d.location)?'http':'https';if(!d.getElementById(id)){js=d.createElement(s);js.id=id;js.src=p+"://platform.twitter.com/widgets.js";fjs.parentNode.insertBefore(js,fjs);}}(document,"script","twitter-wjs");</script>
 
 <script type="text/javascript">
   jQuery(function() {
@@ -204,21 +31,14 @@ get_header(); ?>
       // prevent default action
       e.preventDefault();
 
-      // stash the name of the stream the user wants
-      $stream_name = jQuery(this).attr('rel');
+      // stash the name of the timeline
+      $stream_name = '#' + jQuery(this).attr('rel');
 
-      // hide all the headers and tweets
-      jQuery('.introbox ul, .introbox h4, #cac_about_twitter').hide();
+      // hide about all tweet divs
+      jQuery('.introbox').hide();
 
-      if (e.target.id == 'cac_about_twitter_link') {
-        // show the about twitter div with correct h4
-        jQuery('#cac_about_twitter h4').show();
-        jQuery('#cac_about_twitter').fadeIn('slow');
-      } else {
-        // load the new stream via ajax and show the correct h4
-        jQuery('#' + $stream_name + '_stream').prev().show();
-        jQuery('#' + $stream_name + '_stream').load('/twitter/', {stream:$stream_name}).fadeIn('slow');
-      }
+      // show the selected div
+      jQuery($stream_name).fadeIn('slow');
     });
   }); // end document.ready()
 </script>
@@ -230,26 +50,17 @@ get_header(); ?>
         <h3>What is Twitter?</h3>
         <div class="cac-content">
           <p>Not sure what Twitter is all about?</p>
-          <ul><li><a id="cac_about_twitter_link" href="#">Read More &raquo;</a></li></ul>
+          <ul><li><a id="about_twitter_link" rel="about_twitter" href="#">Read More &raquo;</a></li></ul>
         </div>
       </div>
       <div class="cac-twitter-widget featured">
-        <h3><a href="https://twitter.com/cunycommons" title="@cunycommons twitter feed">@cunycommons</a></h3>
+        <h3>Our Tweets</h3>
         <div class="cac-content">
           <ul>
             <li><a id="commons_timeline_link" rel="commons_timeline" href="#">Tweets</a></li>
             <li><a id="commons_mentions_link" rel="commons_mentions" href="#">Mentions</a></li>
             <li><a id="cuny_hashtag_link" rel="cuny_hashtag" href="#">#cuny</a></li>
-          </ul>
-        </div>
-      </div>
-      <div class="cac-twitter-widget featured">
-        <h3><a href="https://twitter.com/cunycommons/cunycommons">cunycommons Twitter List</a></h3>
-        <div class="cac-content">
-          <ul>
-            <li><a id="list_timeline_link" rel="list_timeline" href="#">Tweets</a></li>
-            <li><a id="list_members_link" rel="list_members" href="#">List Members</a></li>
-            <li><a id="list_subscribers_link" rel="list_subscribers" href="#">List Subscribers</a></li>
+            <li><a id="list_timeline_link" rel="list_timeline" href="#">cunycommons list</a></li>
           </ul>
         </div>
       </div>
@@ -258,7 +69,6 @@ get_header(); ?>
         <div class="cac-content">
           <p>Online resources that provide in-depth information about Twitter, best practices, software and other useful tools.</p>
           <p><a href="http://mashable.com/guidebook/twitter/">Mashable's Twitter Guide Book &raquo;</a></p>
-          <p><a href="https://support.twitter.com/groups/31-twitter-basics">Twitter Basics &raquo;</a></p>
           <p><a href="https://support.twitter.com/groups/31-twitter-basics/topics/104-welcome-to-twitter-support/articles/166337-the-twitter-glossary">The Twitter Glossary &raquo;</a></p>
         </div>
       </div>
@@ -266,27 +76,51 @@ get_header(); ?>
         <h3>Download the Source</h3>
         <div class="cac-content">
           <p>We proudly offer the source used to create this page for free.</p>
-          <p><a href="https://github.com/cuny-academic-commons/CAC-Twitter-Stream">Download Now &raquo;</a></p>
+          <p><a href="https://github.com/cuny-academic-commons/cac-twitter-stream">Download Now &raquo;</a></p>
         </div>
       </div>
     </div>
-    <div class="introbox">
-      <h4>Tweets from The CUNY Academic Commons</h4>
-      <ul id="commons_timeline_stream">
-        <?php echo $cac_twitter_stream->render_html( 'commons_timeline' ); ?>
-      </ul>
-      <h4 style="display:none">Tweets mentioning The CUNY Academic Commons</h4>
-      <ul id="commons_mentions_stream" style="display:none"></ul>
-      <h4 style="display:none">Tweets containing the #cuny hashtag</h4>
-      <ul id="cuny_hashtag_stream" style="display:none"></ul>
-      <h4 style="display:none">Tweets from the "cunycommons" Twitter List</h4>
-      <ul id="list_timeline_stream" style="display:none"></ul>
-      <h4 style="display:none">Members of the "cunycommons" Twitter List</h4>
-      <ul id="list_members_stream" style="display:none"></ul>
-      <h4 style="display:none">Subscribers of the "cunycommons" Twitter List</h4>
-      <ul id="list_subscribers_stream" style="display:none"></ul>
+    <div id="commons_timeline" class="introbox">
+      <a class="twitter-timeline"
+         href="[YOUR TIMELINE WIDGET URL]"
+         data-widget-id="[YOUR TIMELINE WIDGET ID]"
+         data-theme="<?php echo $theme ?>"
+         data-link-color="<?php echo $link_color ?>"
+         data-chrome="<?php echo $chrome ?>"
+         data-border-color="<?php echo $border_color ?>">
+       </a>
     </div>
-    <div id="cac_about_twitter" class="introbox" style="display:none">
+    <div id="commons_mentions" class="introbox" style="display:none">
+      <a class="twitter-timeline"
+         href="[YOUR TIMELINE WIDGET URL]"
+         data-widget-id="[YOUR TIMELINE WIDGET ID]"
+         data-theme="<?php echo $theme ?>"
+         data-link-color="<?php echo $link_color ?>"
+         data-chrome="<?php echo $chrome ?>"
+         data-border-color="<?php echo $border_color ?>">
+       </a>
+    </div>
+    <div id="cuny_hashtag" class="introbox" style="display:none">
+      <a class="twitter-timeline"
+         href="[YOUR TIMELINE WIDGET URL]"
+         data-widget-id="[YOUR TIMELINE WIDGET ID]"
+         data-theme="<?php echo $theme ?>"
+         data-link-color="<?php echo $link_color ?>"
+         data-chrome="<?php echo $chrome ?>"
+         data-border-color="<?php echo $border_color ?>">
+       </a>
+    </div>
+    <div id="list_timeline" class="introbox" style="display:none">
+      <a class="twitter-timeline"
+         href="[YOUR TIMELINE WIDGET URL]"
+         data-widget-id="[YOUR TIMELINE WIDGET ID]"
+         data-theme="<?php echo $theme ?>"
+         data-link-color="<?php echo $link_color ?>"
+         data-chrome="<?php echo $chrome ?>"
+         data-border-color="<?php echo $border_color ?>">
+       </a>      
+    </div>
+    <div id="about_twitter" class="introbox" style="display:none">
       <h4>What is Twitter?</h4>
       <p>Twitter is a free micro-blogging platform that describes itself as, ‘a service for friends, family, and co–workers to communicate and stay connected through the exchange of quick, frequent answers to one simple question: What are you doing?’ Though users can still answer this prompt, tweets have evolved to more than everyday experiences, taking the shape of shared links to interesting content on the web, conversations around hot topics (using hashtags), photos, videos, music, and, most importantly, real-time accounts from people. All messages or ‘tweets’ are 140 characters or less.</p>
       <h4>How do I sign up?</h4>
@@ -317,3 +151,4 @@ get_header(); ?>
 </div>
 
 <?php get_footer(); ?>
+
