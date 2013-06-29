@@ -50,17 +50,17 @@ $border_color  = $custom_fields['cts_border_color'] ? $custom_fields['cts_border
         <h3>What is Twitter?</h3>
         <div class="cac-content">
           <p>Not sure what Twitter is all about?</p>
-          <ul><li><a id="about_twitter_link" rel="about_twitter" href="#">Read More &raquo;</a></li></ul>
+          <ul><li><a id="about_twitter_link" rel="about_twitter" href="#">&larr; Find Out</a></li></ul>
         </div>
       </div>
       <div class="cac-twitter-widget featured">
         <h3>Our Tweets</h3>
         <div class="cac-content">
           <ul>
-            <li><a id="commons_timeline_link" rel="commons_timeline" href="#">Tweets</a></li>
-            <li><a id="commons_mentions_link" rel="commons_mentions" href="#">Mentions</a></li>
-            <li><a id="cuny_hashtag_link" rel="cuny_hashtag" href="#">#cuny</a></li>
-            <li><a id="list_timeline_link" rel="list_timeline" href="#">cunycommons list</a></li>
+            <li><a id="commons_timeline_link" rel="commons_timeline" href="#">&larr; Tweets</a></li>
+            <li><a id="commons_mentions_link" rel="commons_mentions" href="#">&larr; Mentions</a></li>
+            <li><a id="cuny_hashtag_link" rel="cuny_hashtag" href="#">&larr; #cuny</a></li>
+            <li><a id="list_timeline_link" rel="list_timeline" href="#">&larr; cunycommons list</a></li>
           </ul>
         </div>
       </div>
@@ -68,15 +68,15 @@ $border_color  = $custom_fields['cts_border_color'] ? $custom_fields['cts_border
         <h3>Twitter Resources</h3>
         <div class="cac-content">
           <p>Online resources that provide in-depth information about Twitter, best practices, software and other useful tools.</p>
-          <p><a href="http://mashable.com/guidebook/twitter/">Mashable's Twitter Guide Book &raquo;</a></p>
-          <p><a href="https://support.twitter.com/groups/31-twitter-basics/topics/104-welcome-to-twitter-support/articles/166337-the-twitter-glossary">The Twitter Glossary &raquo;</a></p>
+          <p><a href="http://mashable.com/guidebook/twitter/">Mashable's Twitter Guide Book &rarr;</a></p>
+          <p><a href="https://support.twitter.com/groups/31-twitter-basics/topics/104-welcome-to-twitter-support/articles/166337-the-twitter-glossary">The Twitter Glossary &rarr;</a></p>
         </div>
       </div>
       <div class="cac-twitter-widget featured">
         <h3>Download the Source</h3>
         <div class="cac-content">
           <p>We proudly offer the source used to create this page for free.</p>
-          <p><a href="https://github.com/cuny-academic-commons/cac-twitter-stream">Download Now &raquo;</a></p>
+          <p><a href="https://github.com/cuny-academic-commons/cac-twitter-stream">Download Now &rarr;</a></p>
         </div>
       </div>
     </div>
